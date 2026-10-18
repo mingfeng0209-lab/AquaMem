@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>底片接力・隨機任務機</title>
+  <style>
+    :root {
+      --bg: #121214;
+      --card-bg: #1e1e24;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: #2e2e38;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 頂部進度卡 */
+    .header-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .counter-badge {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(245, 158, 11, 0.15);
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+
+    .pool-stat {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* 主抽籤卡片 */
+    .draw-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    .topic-display {
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .topic-title {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .topic-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .btn-draw {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      font-size: 1.15rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-draw:active {
+      transform: scale(0.98);
+      background: var(--accent-hover);
+    }
+
+    /* 拍攝人選擇區 */
+    .save-section {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .member-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .member-chip {
+      background: #2a2a35;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .member-chip.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      border-color: var(--accent);
+    }
+
+    .btn-save {
+      width: 100%;
+      background: var(--success);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-save:active {
+      opacity: 0.9;
+    }
+
+    /* 清單區域 */
+    .list-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .list-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .list-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .btn-action:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .record-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .record-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .record-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .record-num {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 28px;
+    }
+
+    .record-theme {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .record-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .record-user {
+      font-size: 0.85rem;
+      color: #93c5fd;
+      background: rgba(147, 197, 253, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .record-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .empty-hint {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding: 24px 0;
+    }
+
+    /* 成員編輯 Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 進度與狀態 -->
+    <div class="header-card">
+      <div>
+        <div class="counter-badge" id="shotCountBadge">已拍攝：0 / 25 張</div>
+      </div>
+      <div class="pool-stat" id="poolStat">剩餘主題：100 / 100</div>
+    </div>
+
+    <!-- 隨機抽選區 -->
+    <div class="draw-card">
+      <div class="topic-display">
+        <div class="topic-title" id="topicTitle">準備好了嗎？</div>
+        <div class="topic-desc" id="topicDesc">點擊下方按鈕抽選一張專屬主題</div>
+      </div>
+
+      <button class="btn-draw" id="drawBtn" onclick="drawTopic()">🎲 抽選主題</button>
+
+      <!-- 拍攝者確認與儲存區 -->
+      <div class="save-section" id="saveSection">
+        <div style="font-size: 0.85rem; color: var(--text-muted); text-align: left;">
+          誰按下了快門？（點選拍攝者）：
+        </div>
+        <div class="member-chips" id="memberChips">
+          <!-- 成員標籤透過 JS 動態生成 -->
+        </div>
+        <button class="btn-save" id="saveBtn" onclick="saveCurrentShot()">📸 確認拍下並交棒</button>
+      </div>
+    </div>
+
+    <!-- 歷史拍攝清單 -->
+    <div class="list-section">
+      <div class="list-header">
+        <div class="list-title">📋 拍攝完成清單</div>
+        <div class="list-actions">
+          <button class="btn-action" onclick="copyListText()">複製文字</button>
+          <button class="btn-action" onclick="openMemberModal()">編輯名單</button>
+          <button class="btn-action" style="color: var(--danger);" onclick="resetAllData()">重設</button>
+        </div>
+      </div>
+      <ul class="record-list" id="recordList">
+        <!-- 動態渲染清單 -->
+      </ul>
+      <div class="empty-hint" id="emptyHint">尚無拍攝紀錄，快抽籤開始第一棒吧！</div>
+    </div>
+  </div>
+
+  <!-- 成員自訂 Modal -->
+  <div class="modal" id="memberModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 8px;">編輯 5 位成員名稱</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">請用逗號（,）分開每位成員名字：</p>
+      <input type="text" class="modal-input" id="memberInput" value="同事A,同事B,同事C,同事D,同事E">
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn-action" onclick="closeMemberModal()">取消</button>
+        <button class="btn-action" style="background: var(--accent); color: #000; border: none; font-weight: bold;" onclick="saveMembers()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 100 個完全獨立的主題資料庫
+    const FULL_THEME_POOL = [
+      { id: 1, title: "【藍】", desc: "天空、水、衣物、或冷調氛圍" },
+      { id: 2, title: "【防備之外】", desc: "毫無準備、完全沒意識到鏡頭的瞬間" },
+      { id: 3, title: "【距離】", desc: "極近的壓迫、極遠的渺小、或彼此間的空白" },
+      { id: 4, title: "【線條】", desc: "路面、陰影、電線、或是物體邊緣輪廓" },
+      { id: 5, title: "【光】", desc: "逆光、光斑、透光的一角、或明暗交界" },
+      { id: 6, title: "【專注】", desc: "眼神或心思完全定在某處的狀態" },
+      { id: 7, title: "【圓】", desc: "任何帶有圓形輪廓的物件、斑點或局部" },
+      { id: 8, title: "【背影】", desc: "不露臉，單純望向別處的身影" },
+      { id: 9, title: "【紅】", desc: "視野裡最顯眼、跳出來的那抹紅" },
+      { id: 10, title: "【局部】", desc: "不拍全貌，只截取肢體、物件或空間一隅" },
+      { id: 11, title: "【安靜】", desc: "看起來沒有聲音、彷彿定格的畫面" },
+      { id: 12, title: "【荒謬】", desc: "滑稽、違和、好笑或不合邏輯的瞬間" },
+      { id: 13, title: "【重疊】", desc: "倒影、反光、影子、或是兩個輪廓的重合" },
+      { id: 14, title: "【默契】", desc: "同步的動作、相似的狀態或同一個朝向" },
+      { id: 15, title: "【字】", desc: "一句話、標籤、招牌或衣服上的文字" },
+      { id: 16, title: "【透明】", desc: "水、玻璃、塑膠瓶、或穿透的感覺" },
+      { id: 17, title: "【低視角】", desc: "相機放低貼地，由下往上看的世界" },
+      { id: 18, title: "【渴望】", desc: "期待、等待、或想得到某物的眼神與肢體" },
+      { id: 19, title: "【暖】", desc: "溫暖的色溫、熱氣、或是放鬆的溫度感" },
+      { id: 20, title: "【對視】", desc: "被攝者正好迎上鏡頭視線的瞬間" },
+      { id: 21, title: "【痕跡】", desc: "留下來的殘渣、被使用過的樣貌、或凌亂的一角" },
+      { id: 22, title: "【動態】", desc: "移動中的殘影、晃動、模糊、或正在發生的動作" },
+      { id: 23, title: "【觸感】", desc: "看起來很有材質感：粗糙、光滑、冰涼或毛絨" },
+      { id: 24, title: "【留白】", desc: "大面積空曠的背景，主體只縮在一角" },
+      { id: 25, title: "【混亂】", desc: "視線繁雜、無秩序、充滿資訊量的一幕" },
+      { id: 26, title: "【黃】", desc: "醒目的黃色標誌、包裝、落葉或暖黃燈火" },
+      { id: 27, title: "【重量】", desc: "癱軟、下沉、疲憊、或極其沉重紮實的感覺" },
+      { id: 28, title: "【反射】", desc: "後照鏡、水窪、金屬面或墨鏡裡的鏡像" },
+      { id: 29, title: "【對比】", desc: "一大一小、一明一暗、或截然不同的兩件事物" },
+      { id: 30, title: "【手】", desc: "抓握、指向、遞物、放鬆或懸空的手部動作" },
+      { id: 31, title: "【空】", desc: "沒有人的座位、喝完的容器、或空蕩的空間" },
+      { id: 32, title: "【綠】", desc: "植被、路標、飲料或隱沒在角落的綠意" },
+      { id: 33, title: "【秩序】", desc: "整齊排列的物品、磁磚格紋、或規律的重複" },
+      { id: 34, title: "【藏】", desc: "躲在角落、被遮擋一半、或若隱若現的主體" },
+      { id: 35, title: "【交會】", desc: "兩雙手、兩條路、視線碰撞或物體相接處" },
+      { id: 36, title: "【高處】", desc: "相機高舉俯拍、或是視野最上方的景物" },
+      { id: 37, title: "【冷】", desc: "冰塊、冷風感、鐵灰色或冷清的氛圍" },
+      { id: 38, title: "【裂縫】", desc: "門縫、地磚裂紋、指縫、或兩者間的一道縫隙" },
+      { id: 39, title: "【黑白】", desc: "極度純粹的陰暗處、剪影或高反差色塊" },
+      { id: 40, title: "【等待】", desc: "排隊、等候、時間凝滯或懸而未決的狀態" },
+      { id: 41, title: "【重複】", desc: "相同形狀、相同顏色或一模一樣的動作出現兩次以上" },
+      { id: 42, title: "【微小】", desc: "視野裡極易被忽略的微小細節或小物件" },
+      { id: 43, title: "【歪斜】", desc: "地平線傾斜、站不直的身影、或傾倒的物體" },
+      { id: 44, title: "【脆弱】", desc: "看似一碰就碎、薄弱、或容易消逝的狀態" },
+      { id: 45, title: "【背光】", desc: "主體完全變成黑影輪廓的逆光剪影" },
+      { id: 46, title: "【邊緣】", desc: "桌角、牆角、窗框邊緣、或站在邊界上的人" },
+      { id: 47, title: "【甜】", desc: "視覺上感到甜膩、可愛、或讓人放鬆的畫面" },
+      { id: 48, title: "【方向】", desc: "明顯指向某處的手勢、箭頭、或視線引導" },
+      { id: 49, title: "【遮擋】", desc: "故意透過障礙物、前景虛化去拍後方主體" },
+      { id: 50, title: "【平衡】", desc: "巧妙懸空、互相支撐、或微妙維持不倒的狀態" },
+      { id: 51, title: "【日常】", desc: "毫無戲劇性、最普通平凡卻真實的一幕" },
+      { id: 52, title: "【金屬】", desc: "反射銀光、不銹鋼、鐵器或硬朗的質感" },
+      { id: 53, title: "【框】", desc: "透過車窗、門洞、雙手間隙或鏡片形成的框中框" },
+      { id: 54, title: "【急促】", desc: "看起來趕時間、正在快步走或匆忙處理事情" },
+      { id: 55, title: "【柔軟】", desc: "布料皺褶、雲朵、靠墊或整個人陷進去的樣子" },
+      { id: 56, title: "【白】", desc: "大面積的白牆、白紙、反光白光或白色衣物" },
+      { id: 57, title: "【對稱】", desc: "畫面左右或上下呈現鏡像對稱結構" },
+      { id: 58, title: "【陰影】", desc: "人的影子、建築拉長的影子、或落在物體上的暗斑" },
+      { id: 59, title: "【不合群】", desc: "一群東西裡唯一方向不同、顏色不同或格格不入的那個" },
+      { id: 60, title: "【終止】", desc: "盡頭、封閉、吃完、停駐、或是宣告結束的意象" },
+      { id: 61, title: "【橘】", desc: "夕陽天色、飲料標籤、橘色警示錐或鮮豔配件" },
+      { id: 62, title: "【側面】", desc: "90 度完全側臉、車輛側面或建築側面剪影" },
+      { id: 63, title: "【腳步】", desc: "邁出的一步、鞋帶、踩在特定地面的雙腳" },
+      { id: 64, title: "【懸掛】", desc: "吊在空中、掛在椅背、吊飾或掛鉤上的物件" },
+      { id: 65, title: "【阻隔】", desc: "欄杆、鐵絲網、透明帷幕或隔板阻斷的視線" },
+      { id: 66, title: "【溫度】", desc: "看起來熱氣騰騰、冰鎮凝結水珠或手掌傳遞的熱度" },
+      { id: 67, title: "【繁複】", desc: "密密麻麻的紋理、細節堆疊或複雜交錯的結構" },
+      { id: 68, title: "【殘缺】", desc: "缺了一角的物件、咬了一口的食物或斑駁脫落處" },
+      { id: 69, title: "【水平】", desc: "極致平坦的地平線、桌面水線或水平延伸感" },
+      { id: 70, title: "【垂直】", desc: "筆直聳立的柱子、樹幹、直挺站立或垂直下墜感" },
+      { id: 71, title: "【視線】", desc: "某個人的視線落點、或是視線引導的虛擬延伸線" },
+      { id: 72, title: "【黑】", desc: "深不見底的暗處、黑色衣物或極致深邃的色塊" },
+      { id: 73, title: "【秘密】", desc: "講悄悄話、手遮住嘴巴、或像在隱藏某事的樣子" },
+      { id: 74, title: "【折射】", desc: "透過水滴、厚玻璃、波紋產生扭曲的景象" },
+      { id: 75, title: "【疲憊】", desc: "靠著牆、揉太陽穴、整個人垮下來的無力感" },
+      { id: 76, title: "【驚訝】", desc: "嘴巴微張、睜大雙眼或猝不及防的愣住表情" },
+      { id: 77, title: "【包圍】", desc: "主體被人群、植物、物品或環境緊緊環繞" },
+      { id: 78, title: "【單一】", desc: "畫面極端純粹，幾乎只有一種顏色或單一主體" },
+      { id: 79, title: "【層次】", desc: "前景、中景、後景層次分明、遠近遞進的空間" },
+      { id: 80, title: "【摩擦】", desc: "兩物接觸、擦拭、洗手或輪胎與地面的交界" },
+      { id: 81, title: "【微光】", desc: "昏暗中僅存的一點光源、按鈕燈號或微弱縫隙光" },
+      { id: 82, title: "【鬆弛】", desc: "毫無形象的伸懶腰、翹腳、躺平或放鬆形態" },
+      { id: 83, title: "【緊繃】", desc: "握緊的拳頭、拉直的繩索或僵硬的身體線條" },
+      { id: 84, title: "【背對背】", desc: "兩個人或兩件事物朝向完全相反的方向" },
+      { id: 85, title: "【波紋】", desc: "水面漣漪、布料波浪、或是皺褶形成的紋路" },
+      { id: 86, title: "【粗糙】", desc: "柏油路面、樹皮、石頭或未經修飾的粗粒質感" },
+      { id: 87, title: "【鏡頭外】", desc: "畫面裡有一隻手或腳伸進來，提示鏡頭外有人" },
+      { id: 88, title: "【平行】", desc: "兩條永不相交的軌跡、並排的手指或並列的物件" },
+      { id: 89, title: "【沉醉】", desc: "閉上眼享受、深呼吸、喝到第一口飲料的陶醉感" },
+      { id: 90, title: "【空隙】", desc: "兩個人肩膀之間、兩件物體縫隙中看到的景物" },
+      { id: 91, title: "【下沉】", desc: "視線往低處落、東西掉落、或是坐進深處的陷落感" },
+      { id: 92, title: "【上升】", desc: "蒸氣上升、舉起的手、或是往高處跳躍的動態" },
+      { id: 93, title: "【模糊】", desc: "故意對焦在錯誤位置、前景模糊或移動拖影" },
+      { id: 94, title: "【光斑】", desc: "樹葉縫隙灑落的圓形光點或鏡頭炫光" },
+      { id: 95, title: "【錯位】", desc: "視覺上看起來像戴了怪帽子或長出奇怪肢體的錯覺" },
+      { id: 96, title: "【舊】", desc: "褪色的包裝、磨損的皮件、老舊痕跡或復古質感" },
+      { id: 97, title: "【鮮豔】", desc: "畫面色彩飽和度極高、視覺衝擊強烈的一刻" },
+      { id: 98, title: "【節奏】", desc: "連續排列的燈柱、間隔均勻的影子或規律的起伏" },
+      { id: 99, title: "【釋放】", desc: "大笑、長吁一口氣、放下背包或伸直雙腿的解脫感" },
+      { id: 100, title: "【未完】", desc: "話講到一半、事情做到一半、尚未結束的進行式" }
+    ];
+
+    // 狀態變數
+    let members = JSON.parse(localStorage.getItem('relay_members')) || ["同事A", "同事B", "同事C", "同事D", "同事E"];
+    let savedRecords = JSON.parse(localStorage.getItem('relay_records')) || [];
+    let currentDrawn = null;
+    let selectedMember = null;
+
+    // 初始化
+    function init() {
+      renderMembers();
+      renderRecords();
+      updateStats();
+    }
+
+    // 取得當前可用主題池（排除已儲存的主題）
+    function getAvailablePool() {
+      const savedIds = new Set(savedRecords.map(r => r.themeId));
+      return FULL_THEME_POOL.filter(t => !savedIds.has(t.id));
+    }
+
+    // 更新統計數據
+    function updateStats() {
+      const available = getAvailablePool();
+      document.getElementById('shotCountBadge').innerText = `已拍攝：${savedRecords.length} / 25 張`;
+      document.getElementById('poolStat').innerText = `剩餘主題：${available.length} / ${FULL_THEME_POOL.length}`;
+    }
+
+    // 抽籤動作
+    function drawTopic() {
+      const pool = getAvailablePool();
+      if (pool.length === 0) {
+        alert("100 個主題已經全數抽完囉！");
+        return;
+      }
+
+      const drawBtn = document.getElementById('drawBtn');
+      drawBtn.disabled = true;
+
+      // 跑動動畫效果
+      let counter = 0;
+      const interval = setInterval(() => {
+        const rand = pool[Math.floor(Math.random() * pool.length)];
+        document.getElementById('topicTitle').innerText = rand.title;
+        document.getElementById('topicDesc').innerText = rand.desc;
+        counter++;
+        if (counter > 10) {
+          clearInterval(interval);
+          const finalPick = pool[Math.floor(Math.random() * pool.length)];
+          currentDrawn = finalPick;
+          document.getElementById('topicTitle').innerText = finalPick.title;
+          document.getElementById('topicDesc').innerText = finalPick.desc;
+          
+          // 自動推測下一棒是誰
+          autoSelectNextMember();
+          
+          document.getElementById('saveSection').style.display = 'flex';
+          drawBtn.disabled = false;
+        }
+      }, 50);
+    }
+
+    // 自動推薦下一位接棒者
+    function autoSelectNextMember() {
+      if (members.length === 0) return;
+      const nextIdx = savedRecords.length % members.length;
+      selectMember(members[nextIdx]);
+    }
+
+    // 選擇拍攝者
+    function selectMember(name) {
+      selectedMember = name;
+      document.querySelectorAll('.member-chip').forEach(el => {
+        el.classList.toggle('active', el.dataset.name === name);
+      });
+    }
+
+    // 儲存紀錄
+    function saveCurrentShot() {
+      if (!currentDrawn) return;
+      if (!selectedMember) {
+        alert("請先點選拍攝者是誰！");
+        return;
+      }
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const newRecord = {
+        shotNo: savedRecords.length + 1,
+        themeId: currentDrawn.id,
+        themeTitle: currentDrawn.title,
+        photographer: selectedMember,
+        time: timeStr
+      };
+
+      savedRecords.push(newRecord);
+      localStorage.setItem('relay_records', JSON.stringify(savedRecords));
+
+      // 重置當前卡片
+      currentDrawn = null;
+      document.getElementById('saveSection').style.display = 'none';
+      document.getElementById('topicTitle').innerText = "✅ 快門已按下！";
+      document.getElementById('topicDesc').innerText = `第 ${newRecord.shotNo} 張完成，請過片滾輪轉到底交給下一位`;
+
+      renderRecords();
+      updateStats();
+    }
+
+    // 渲染清單
+    function renderRecords() {
+      const listEl = document.getElementById('recordList');
+      const emptyEl = document.getElementById('emptyHint');
+      listEl.innerHTML = '';
+
+      if (savedRecords.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      savedRecords.forEach(r => {
+        const li = document.createElement('li');
+        li.className = 'record-item';
+        li.innerHTML = `
+          <div class="record-left">
+            <span class="record-num">#${String(r.shotNo).padStart(2, '0')}</span>
+            <span class="record-theme">${r.themeTitle}</span>
+          </div>
+          <div class="record-right">
+            <span class="record-user">${r.photographer}</span>
+            <span class="record-time">${r.time}</span>
+          </div>
+        `;
+        listEl.appendChild(li);
+      });
+    }
+
+    // 渲染成員標籤
+    function renderMembers() {
+      const container = document.getElementById('memberChips');
+      container.innerHTML = '';
+      members.forEach(m => {
+        const chip = document.createElement('div');
+        chip.className = 'member-chip';
+        chip.innerText = m;
+        chip.dataset.name = m;
+        chip.onclick = () => selectMember(m);
+        container.appendChild(chip);
+      });
+    }
+
+    // 複製文字清單
+    function copyListText() {
+      if (savedRecords.length === 0) {
+        alert("清單是空的，還沒有任何紀錄喔！");
+        return;
+      }
+      let text = "📷【即可拍 12 小時接力清單】\n";
+      savedRecords.forEach(r => {
+        text += `#${r.shotNo} ${r.themeTitle} - ${r.photographer} (${r.time})\n`;
+      });
+      navigator.clipboard.writeText(text).then(() => {
+        alert("已成功複製清單文字，可直接貼到 LINE！");
+      }).catch(() => {
+        alert("複製失敗，請手動選取文字");
+      });
+    }
+
+    // 成員編輯 Modal 邏輯
+    function openMemberModal() {
+      document.getElementById('memberInput').value = members.join(',');
+      document.getElementById('memberModal').style.display = 'flex';
+    }
+
+    function closeMemberModal() {
+      document.getElementById('memberModal').style.display = 'none';
+    }
+
+    function saveMembers() {
+      const val = document.getElementById('memberInput').value;
+      const parsed = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      if (parsed.length === 0) {
+        alert("至少需要填寫一位成員名稱");
+        return;
+      }
+      members = parsed;
+      localStorage.setItem('relay_members', JSON.stringify(members));
+      renderMembers();
+      closeMemberModal();
+    }
+
+    // 重設所有紀錄
+    function resetAllData() {
+      if (confirm("確定要清空所有已拍紀錄並重置 100 個主題庫嗎？（此動作無法還原）")) {
+        savedRecords = [];
+        localStorage.removeItem('relay_records');
+        currentDrawn = null;
+        document.getElementById('saveSection').style.display = 'none';
+        document.getElementById('topicTitle').innerText = "準備好了嗎？";
+        document.getElementById('topicDesc').innerText = "點擊下方按鈕抽選一張專屬主題";
+        renderRecords();
+        updateStats();
+      }
+    }
+
+    // 啟動 App
+    init();
+  </script>
+</body>
+</html>
